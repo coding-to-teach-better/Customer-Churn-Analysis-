@@ -1,0 +1,201 @@
+
+def run():
+
+# import necessary modules
+    from random import randin
+    import random
+    import pandas as pd
+    import numpy as np
+    from imblearn.under_sampling import RandomUnderSampler
+    import matplotlib.pyplot as plt
+    import time
+    import seaborn as sns
+    from sklearn.metrics import accuracy_score
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.model_selection import train_test_split
+    from sklearn.svm import SVC
+    from sklearn.metrics import classification_report
+    from sklearn.metrics import confusion_matrix
+    import matplotlib.pyplot as plt
+    from sklearn.datasets import make_classification
+    from sklearn.metrics import RocCurveDisplay
+    from sklearn.metrics import roc_auc_score
+    
+# import the dataset and convert to pandas dataframe 
+    file_path = "C:\\Users\\harry\\Desktop\\Masters\\Applied A.I\\Summative\\Applied Artificial Intelligence Summative Assessment Dataset\\RMIA4.csv"
+    csv = pd.read_csv (r'{path}'.format(path = file_path))
+    df = pd.DataFrame(csv)
+    scaler = StandardScaler()
+
+# define function to create a random solution consisting of one attribute randomly drawn from the dataframe
+    def randomSolution(df):
+        attributes = list(range(len(df.columns)))
+        solution = []
+        randomNum = random.randint(0, len(attributes) - 1)
+        solution.append(randomNum)
+        attributes.remove(randomNum)
+        return(solution)
+
+# define function to find the accuracy score of a SVM run using a given solution 
+    def getAccuracy(df, solution):
+        raw_data = df[df.columns[solution]]
+        raw_data = raw_data.to_numpy()
+# define x and y values  
+        x = raw_data
+        y = df['Churn']
+# normalise the x values
+        x = scaler.fit_transform(x,y)
+# undersample the dataset to offset the disproportionate nunmber of churners 
+        under_sampler = RandomUnderSampler()
+        X_res, Y_res = under_sampler.fit_resample(x, y)
+# split the dataset into training data and test data
+        x_training_data, x_test_data, y_training_data, y_test_data = train_test_split(X_res, Y_res, test_size = 0.3)
+# set the parameters of the support vector machine
+        model = SVC(C = 1.998112195628537, gamma = 1.0003015792654086)
+# train the model 
+        model.fit(x_training_data, y_training_data)
+# predict values using the test data
+        y_pred = model.predict(x_test_data)
+# generate an accuracy score of the models preduction 
+        aS = (accuracy_score(y_test_data, y_pred))
+        return(aS, y_test_data, y_pred)
+    
+# define a function to generate neighbours from a given solution by randomly adding a feature to the original solution
+    def getNeighbours(df, solution, nN):
+        neighbours = []
+        for i in range(nN):
+                num=random.randint(0,len(df.columns)-1)
+                neighbour = solution.copy()
+# check the feature is not already in the solution and is not the feature we are trying to predict
+                if num not in solution and df.columns[num] != "Churn":
+                    neighbour.append(num)
+                    neighbours.append(neighbour)
+        return(neighbours)
+
+# define a feature to assess the accuracy of each neighbour and return the neighbour with the best accuracy score 
+    def getBestNeighbour(df, neighbours):
+# assign initial neighbour as best neighbour
+        bestAccuracy, best_test_Y, best_pred_Y = getAccuracy(df, neighbours[0])
+        bestNeighbour = neighbours[0]
+# iterate through neighbours 
+        for neighbour in neighbours:
+# find accuracy of neighbour 
+            currentAccuracy, current_test_Y, current_pred_Y = getAccuracy(df, neighbour)
+# assess whether current neighbour accuracy greater than best neighbour accuracy
+            if currentAccuracy > bestAccuracy:
+                bestAccuracy = currentAccuracy
+                bestNeighbour = neighbour
+                best_test_Y = current_test_Y
+                best_pred_Y = current_pred_Y     
+        return(bestNeighbour, bestAccuracy, best_test_Y, best_pred_Y)
+
+# define a function to plot a lift curve 
+    def plot_lift_curve(y_val, y_pred, step=0.01):
+        #define an auxiliar dataframe to plot the curve
+        aux_lift = pd.DataFrame()
+        #create a real and predicted column for our new DataFrame and assign values
+        aux_lift['real'] = y_val
+        aux_lift['predicted'] = y_pred
+        #order the values for the predicted probability column:
+        aux_lift.sort_values('predicted',ascending=False,inplace=True)
+
+        #create the values that will go into the X axis 
+        x_val = np.arange(step,1+step,step)
+        #calculate the ratio of ones data
+        ratio_ones = aux_lift['real'].sum() / len(aux_lift)
+        #create an empty vector with the values that will go on the Y axis 
+        y_v = []
+        
+        #calculate for each x value its correspondent y value
+        for x in x_val:
+            num_data = int(np.ceil(x*len(aux_lift))) 
+            data_here = aux_lift.iloc[:num_data,:]   
+            ratio_ones_here = data_here['real'].sum()/len(data_here)
+            y_v.append(ratio_ones_here / ratio_ones)     
+       #plot the figure
+        fig, axis = plt.subplots()
+        fig.figsize = (40,40)
+        axis.plot(x_val, y_v, 'g-', linewidth = 3, markersize = 5)
+        axis.plot(x_val, np.ones(len(x_val)), 'k-')
+        axis.set_xlabel('Proportion of sample')
+        axis.set_ylabel('Lift')
+        plt.savefig("C:\\Users\\harry\\Desktop\\Masters\\Applied A.I\\Summative\\Summative graphs\\SVOlift.jpg")
+        plt.show()
+ 
+# define feature to initialise hill climbing algorithm      
+    def hillClimbing(df, limit, nN):
+# counter to track the number of iterations taken to find the optimal solution
+        iteration_counter = 0
+        startTime = time.time()
+# list to store the value of each new optimum solution
+        iteration_values = []
+# list to store the number of iterations taken to reach each solution
+        iteration_counts = []
+# assign a random solution as the current solution
+        currentSolution = randomSolution(df)
+# get the accuracy score of the initial solution
+        currentAccuracy, current_test_Y, current_pred_Y = getAccuracy(df, currentSolution)
+# get the nighbours of the initial solution 
+        neighbours = getNeighbours(df, currentSolution, nN)
+# store the inital accuracy value
+        iteration_values.append(currentAccuracy)
+# get the most accurate neighbour 
+        bestNeighbour, bestAccuracy, best_test_Y, best_pred_Y = getBestNeighbour(df, neighbours)
+# initialise a counter to monitor how many iterations have passed with no improvement in accuracy
+        counter = 0
+# check whether the termination condition of 100 iterations with no imporvement has been reached 
+        while counter < limit:
+            iteration_counter += 1
+# get neighbours of current solution
+            neighbours = getNeighbours(df, currentSolution, nN)
+# get the neighbour with the best accuracy score 
+            bestNeighbour, bestAccuracy, best_test_Y, best_pred_Y = getBestNeighbour(df, neighbours)
+# assess whether this neighbour's accuracy score is greater than the accuracy score of the best solution reached so far
+            if bestAccuracy > currentAccuracy:
+# if so replace the current solution and its accuracy score with the best solution and its accuracy score
+                currentSolution = bestNeighbour
+                currentAccuracy = bestAccuracy
+                current_test_Y = best_test_Y
+                current_pred_Y = best_pred_Y
+# add the solutions accuracy score to a list
+                iteration_values.append(currentAccuracy)
+# add the number of iterations to the list
+                iteration_counts.append(iteration_counter)
+            else:
+# if there is no improvement in accuracy score increment counter by one 
+                counter += 1 
+# print execution time, accuracy scores
+        executionTime = (time.time() - startTime) 
+        print("Execution time is", executionTime)
+        print("iteration values are", iteration_values)
+# print classification report and confusion matrix for the final solution reached
+        print((classification_report(current_test_Y, current_pred_Y)))
+        print((confusion_matrix(current_test_Y, current_pred_Y)))
+# plot the lift curve and ROC curve for the final solution reached
+        plot_lift_curve(current_test_Y, current_pred_Y)
+        RocCurveDisplay.from_predictions(current_test_Y, current_pred_Y)
+# print the AOC score for the ROC curve
+        print("area under the curve is", roc_auc_score(current_test_Y, current_pred_Y))
+        return iteration_values, currentSolution, iteration_counts
+    
+    
+# initialise random solution
+    solution = randomSolution(df)
+# initiate hill climbing algorithm
+    iteration_values, currentSolution, iteration_counts = hillClimbing(df, 100, 7)
+# print the optimised feature set
+    for i in currentSolution:
+        print(df.columns[i])
+# print the accuracy values of each solution reached
+    for value in iteration_values:
+        print(value)
+# print the iteration counts of each solution reached
+    for count in iteration_counts:
+        print(count)
+
+    
+
+# run the program
+run()
+
