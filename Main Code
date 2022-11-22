@@ -23,7 +23,7 @@ def run():
     from sklearn.metrics import roc_auc_score
     
 # import the dataset and convert to pandas dataframe 
-    file_path = "C:\\Users\\harry\\Desktop\\Masters\\Applied A.I\\Summative\\Applied Artificial Intelligence Summative Assessment Dataset\\RMIA4.csv"
+    file_path = "enter file path"
     csv = pd.read_csv (r'{path}'.format(path = file_path))
     df = pd.DataFrame(csv)
     scaler = StandardScaler()
@@ -120,7 +120,7 @@ def run():
         axis.plot(x_val, np.ones(len(x_val)), 'k-')
         axis.set_xlabel('Proportion of sample')
         axis.set_ylabel('Lift')
-        plt.savefig("C:\\Users\\harry\\Desktop\\Masters\\Applied A.I\\Summative\\Summative graphs\\SVOlift.jpg")
+        plt.savefig("enter file save path")
         plt.show()
  
 # define feature to initialise hill climbing algorithm      
