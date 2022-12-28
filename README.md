@@ -1,3 +1,5 @@
+# Customer Churn Analysis
+
 Here a dataset from unnamed phone company is used to predict customer churn.\
 A hill climbing algorithm is used to optimise feature set.\
 A best neighbour hiuristic is employed for the hill climbing algorithm.\
