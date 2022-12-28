@@ -1,4 +1,4 @@
-Customer churn analysis./n
+Customer churn analysis.\n
 Uses dataset from unnamed phone company to predict customer churn.
 Hill climbing algorithm used to optimise feature set.
 Best neighbour hiuristic employed for hill climbing algorithm.
